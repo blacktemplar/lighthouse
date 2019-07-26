@@ -306,6 +306,9 @@ impl<T: EthSpec> BeaconState<T> {
         let active_validator_count = cache.active_validator_count();
         let shard_delta = T::get_shard_delta(active_validator_count, spec.target_committee_size);
 
+        if let Err(e) = self.get_epoch_start_shard(RelativeEpoch::Next) {
+            println!("cached epoch next was uninitialized: {:?}", e);
+        }
         Ok((self.latest_start_shard + shard_delta) % T::ShardCount::to_u64())
     }
 
