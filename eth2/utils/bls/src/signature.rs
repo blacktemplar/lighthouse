@@ -194,4 +194,136 @@ mod tests {
             }
         }
     }
+
+    fn add_flag_value(value: &mut u8, a_flag: bool, b_flag: bool, c_flag: bool) {
+        if a_flag {
+            *value += 32;
+        }
+        if b_flag {
+            *value += 64;
+        }
+        if c_flag {
+            *value += 128;
+        }
+    }
+
+    fn fill_x(x: &[u8], sig: &mut [u8], least_significant_index: usize) {
+        assert!(x.len() > 0);
+        assert!(x.len() <= least_significant_index + 1);
+        assert!(least_significant_index < sig.len());
+        sig[least_significant_index + 1 - x.len()..least_significant_index + 1].copy_from_slice(x);
+    }
+
+    fn construct_signature(a_flag1: bool, b_flag1: bool, c_flag1: bool, x1: &[u8], a_flag2: bool,
+                           b_flag2: bool, c_flag2: bool, x2: &[u8]) -> [u8; BLS_SIG_BYTE_SIZE] {
+        let mut signature = [0; BLS_SIG_BYTE_SIZE];
+        fill_x(x1, &mut signature[0..], BLS_SIG_BYTE_SIZE / 2 - 1);
+        assert!(signature[0] < 32);
+        add_flag_value(&mut signature[0], a_flag1, b_flag1, c_flag1);
+        fill_x(x2, &mut signature[BLS_SIG_BYTE_SIZE / 2..], BLS_SIG_BYTE_SIZE / 2 - 1);
+        assert!(signature[BLS_SIG_BYTE_SIZE / 2] < 32);
+        add_flag_value(&mut signature[BLS_SIG_BYTE_SIZE / 2], a_flag2, b_flag2, c_flag2);
+        signature
+    }
+
+    fn construct_signature_from_hex(a_flag1: bool, b_flag1: bool, c_flag1: bool, x1: &str,
+                                    a_flag2: bool, b_flag2: bool, c_flag2: bool, x2: &str)
+                                    -> [u8; BLS_SIG_BYTE_SIZE] {
+        construct_signature(a_flag1, b_flag1, c_flag1, hex::decode(x1).unwrap().as_slice(),
+                            a_flag2, b_flag2, c_flag2, hex::decode(x2).unwrap().as_slice())
+    }
+
+    const Q_HEX: &str =
+        "1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab";
+    const Q_MINUS_ONE_HEX: &str =
+        "1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaaa";
+
+    #[test]
+    pub fn test_valid_signature() {
+        let signature_bytes = construct_signature_from_hex(true, false, true, Q_MINUS_ONE_HEX,
+                                                           false, false, false, Q_MINUS_ONE_HEX);
+        let signature = Signature::from_bytes(&signature_bytes[..]);
+        assert!(signature.is_ok());
+    }
+
+    #[test]
+    pub fn test_invalid_signature_x1_ge_q() {
+        let signature_bytes = construct_signature_from_hex(true, false, true, Q_HEX, false,
+                                                           false, false, Q_MINUS_ONE_HEX);
+        let signature = Signature::from_bytes(&signature_bytes[..]);
+        assert!(signature.is_err());
+    }
+
+    #[test]
+    pub fn test_invalid_signature_x2_ge_q() {
+        let signature_bytes = construct_signature_from_hex(true, false, true, Q_MINUS_ONE_HEX,
+                                                           false, false, false, Q_HEX);
+        let signature = Signature::from_bytes(&signature_bytes[..]);
+        assert!(signature.is_err());
+    }
+
+    #[test]
+    pub fn test_invalid_signature_a_flag2_eq_1() {
+        let signature_bytes = construct_signature_from_hex(true, false, true, Q_MINUS_ONE_HEX,
+                                                           true, false, false, Q_MINUS_ONE_HEX);
+        let signature = Signature::from_bytes(&signature_bytes[..]);
+        assert!(signature.is_err());
+    }
+
+    #[test]
+    pub fn test_invalid_signature_b_flag2_eq_1() {
+        let signature_bytes = construct_signature_from_hex(true, false, true, Q_MINUS_ONE_HEX,
+                                                           false, true, false, Q_MINUS_ONE_HEX);
+        let signature = Signature::from_bytes(&signature_bytes[..]);
+        assert!(signature.is_err());
+    }
+
+    #[test]
+    pub fn test_invalid_signature_c_flag2_eq_1() {
+        let signature_bytes = construct_signature_from_hex(true, false, true, Q_MINUS_ONE_HEX,
+                                                           false, false, true, Q_MINUS_ONE_HEX);
+        let signature = Signature::from_bytes(&signature_bytes[..]);
+        assert!(signature.is_err());
+    }
+
+    #[test]
+    pub fn test_invalid_signature_c_flag1_eq_0() {
+        let signature_bytes = construct_signature_from_hex(true, false, false, Q_MINUS_ONE_HEX,
+                                                           false, false, false, Q_MINUS_ONE_HEX);
+        let signature = Signature::from_bytes(&signature_bytes[..]);
+        //we also allow empty since uncompressed signatures are parsed as empty in our code
+        assert!(signature.is_err() || (signature.is_ok() && signature.unwrap().is_empty()));
+    }
+
+    #[test]
+    pub fn test_valid_signature_infinity() {
+        let signature_bytes = construct_signature_from_hex(false, true, true, "00",
+                                                           false, false, false, "00");
+        let signature = Signature::from_bytes(&signature_bytes[..]);
+        assert!(signature.is_ok());
+    }
+
+    #[test]
+    pub fn test_invalid_signature_b_flag1_eq_1_a_flag1_eq_1() {
+        let signature_bytes = construct_signature_from_hex(true, true, true, "00",
+                                                           false, false, false, "00");
+        let signature = Signature::from_bytes(&signature_bytes[..]);
+        assert!(signature.is_err());
+    }
+
+    #[test]
+    pub fn test_invalid_signature_b_flag1_eq_1_x1_eq_1() {
+        let signature_bytes = construct_signature_from_hex(false, true, true, "01",
+                                                           false, false, false, "00");
+        let signature = Signature::from_bytes(&signature_bytes[..]);
+        assert!(signature.is_err());
+    }
+
+    #[test]
+    pub fn test_invalid_signature_b_flag1_eq_1_x2_eq_1() {
+        let signature_bytes = construct_signature_from_hex(false, true, true, "0",
+                                                           false, false, false, "1");
+        let signature = Signature::from_bytes(&signature_bytes[..]);
+        assert!(signature.is_err());
+    }
 }
