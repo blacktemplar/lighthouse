@@ -287,12 +287,34 @@ mod tests {
     }
 
     #[test]
+    pub fn test_verify_invalid_signature_c_flag2_eq_1() {
+        let keypair = Keypair::random();
+
+        let msg = &[42, 42];
+        let domain = 0;
+        let signature = Signature::new(msg, domain, &keypair.sk);
+        let mut signature_bytes = signature.as_bytes();
+
+        let signature = Signature::from_bytes(&signature_bytes[..]);
+        assert!(signature.is_ok() && signature.unwrap().verify(msg, domain, &keypair.pk));
+
+        //set c_flag2 to 1
+        assert!(signature_bytes[BLS_SIG_BYTE_SIZE / 2] < 32);
+        add_flag_value(&mut signature_bytes[BLS_SIG_BYTE_SIZE / 2], false, false, true);
+
+        let signature = Signature::from_bytes(&signature_bytes[..]);
+        //result should be err see also test test_invalid_signature_c_flag2_eq_1, but in this
+        // test we also allow it to be ok if verify returns false
+        assert!(signature.is_err() || !signature.unwrap().verify(msg, domain, &keypair.pk));
+    }
+
+    #[test]
     pub fn test_invalid_signature_c_flag1_eq_0() {
         let signature_bytes = construct_signature_from_hex(true, false, false, Q_MINUS_ONE_HEX,
                                                            false, false, false, Q_MINUS_ONE_HEX);
         let signature = Signature::from_bytes(&signature_bytes[..]);
         //we also allow empty since uncompressed signatures are parsed as empty in our code
-        assert!(signature.is_err() || (signature.is_ok() && signature.unwrap().is_empty()));
+        assert!(signature.is_err() || signature.unwrap().is_empty());
     }
 
     #[test]
