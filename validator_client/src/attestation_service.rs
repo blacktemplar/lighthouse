@@ -519,15 +519,23 @@ impl<T: SlotClock + 'static, E: EthSpec> AttestationService<T, E> {
                 .await
                 .map_err(|e| format!("Failed to publish aggregate and proofs: {:?}", e))?;
             match publish_status {
-                PublishStatus::Valid => info!(
-                    log,
-                    "Successfully published attestations";
-                    "signatures" => attestation.aggregation_bits.num_set_bits(),
-                    "head_block" => format!("{:?}", attestation.data.beacon_block_root),
-                    "committee_index" => attestation.data.index,
-                    "slot" => attestation.data.slot.as_u64(),
-                    "type" => "aggregated",
-                ),
+                PublishStatus::Valid => {
+                    info!(
+                        log,
+                        "Successfully published attestations";
+                        "signatures" => attestation.aggregation_bits.num_set_bits(),
+                        "head_block" => format!("{:?}", attestation.data.beacon_block_root),
+                        "committee_index" => attestation.data.index,
+                        "slot" => attestation.data.slot.as_u64(),
+                        "type" => "aggregated",
+                    );
+                    debug!(
+                        log,
+                        "Successfully published aggregated attestation";
+                        "aggregation_bits" =>
+                            format!("{:?}", attestation.aggregation_bits.as_slice()),
+                    )
+                },
                 PublishStatus::Invalid(msg) => crit!(
                     log,
                     "Published attestation was invalid";
