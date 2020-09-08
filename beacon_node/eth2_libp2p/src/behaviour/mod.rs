@@ -127,8 +127,20 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
             opportunistic_graft_threshold: 5.0,
         };
 
+        let callback = |peer: &PeerId, topic: &TopicHash, time: f64| {
+            metrics::observe(&metrics::MESSAGE_DELIVERY_TIMES, time);
+            if let Some(m) = metrics::get_histogram(&metrics::MESSAGE_DELIVERY_TIMES_PER_TOPIC,
+                                                    &[&format!("{:?}", topic)]) {
+                m.observe(time);
+            }
+            if let Some(m) = metrics::get_histogram(&metrics::MESSAGE_DELIVERY_TIMES_PER_ID,
+                                                    &[&format!("{:?}", peer)]) {
+                m.observe(time);
+            }
+        };
+
         gossipsub
-            .with_peer_score(params, thresholds)
+            .with_peer_score_and_message_delivery_time_callback(params, thresholds, Some(callback))
             .expect("Valid score params and thresholds");
 
 

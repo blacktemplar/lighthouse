@@ -50,6 +50,23 @@ lazy_static! {
         "Failed gossip publishes",
         &["topic_hash"]
     );
+
+    pub static ref MESSAGE_DELIVERY_TIMES: Result<Histogram> = try_create_histogram(
+        "message_delivery_times",
+        "Message Delivery Times"
+    );
+
+    pub static ref MESSAGE_DELIVERY_TIMES_PER_TOPIC: Result<HistogramVec> = try_create_histogram_vec(
+        "message_delivery_times_per_topic",
+        "Message Delivery Times Per Topic",
+        &["topic_hash"]
+    );
+
+    pub static ref MESSAGE_DELIVERY_TIMES_PER_ID: Result<HistogramVec> = try_create_histogram_vec(
+        "message_delivery_times_per_id",
+        "Message Delivery Times Per Peer ID",
+        &["peer_id"]
+    );
 }
 
 pub fn scrape_discovery_metrics() {
