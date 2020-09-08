@@ -55,6 +55,12 @@ pub struct Config {
     /// List of nodes to initially connect to, on Multiaddr format.
     pub boot_nodes_multiaddr: Vec<Multiaddr>,
 
+    /// List of trusted peers.
+    pub trusted_peers_enr: Vec<Enr>,
+
+    /// List of trusted peers on Multiaddr format.
+    pub trusted_peers_multiaddr: Vec<Multiaddr>,
+
     /// List of libp2p nodes to initially connect to.
     pub libp2p_nodes: Vec<Multiaddr>,
 

@@ -126,6 +126,16 @@ pub fn cli_app<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(true),
         )
         .arg(
+            Arg::with_name("trusted-peers")
+                .long("trusted-peers")
+                .allow_hyphen_values(true)
+                .value_name("ENR/MULTIADDR LIST")
+                .help("One or more comma-delimited base64-encoded ENR's to manually connect to \
+                        and trust ultimately. Multiaddr is also supported. Such peers will always \
+                        have a better score than all others.")
+                .takes_value(true),
+        )
+        .arg(
             Arg::with_name("disable-discovery")
                 .long("disable-discovery")
                 .help("Disables the discv5 discovery protocol. The node will not search for new peers or participate in the discovery protocol.")

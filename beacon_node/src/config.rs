@@ -307,10 +307,10 @@ pub fn set_network_config(
         config.discovery_port = port;
     }
 
-    if let Some(boot_enr_str) = cli_args.value_of("boot-nodes") {
+    let parse_enrs_or_multiaddrs = |str| {
         let mut enrs: Vec<Enr> = vec![];
         let mut multiaddrs: Vec<Multiaddr> = vec![];
-        for addr in boot_enr_str.split(',') {
+        for addr in str.split(',') {
             match addr.parse() {
                 Ok(enr) => enrs.push(enr),
                 Err(_) => {
@@ -328,9 +328,21 @@ pub fn set_network_config(
                 }
             }
         }
+        (enrs, multiaddrs)
+    };
+
+    if let Some(boot_enr_str) = cli_args.value_of("boot-nodes") {
+        let (enrs, multiaddrs) = parse_enrs_or_multiaddrs(boot_enr_str);
         config.boot_nodes_enr = enrs;
         config.boot_nodes_multiaddr = multiaddrs;
     }
+
+    if let Some(trusted_enr_str) = cli_args.value_of("trusted-peers") {
+        let (enrs, multiaddrs) = parse_enrs_or_multiaddrs(trusted_enr_str);
+        config.trusted_peers_enr = enrs;
+        config.trusted_peers_multiaddr = multiaddrs;
+    }
+
 
     if let Some(libp2p_addresses_str) = cli_args.value_of("libp2p-addresses") {
         config.libp2p_nodes = libp2p_addresses_str

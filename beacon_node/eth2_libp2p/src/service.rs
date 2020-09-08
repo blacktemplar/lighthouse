@@ -153,28 +153,38 @@ impl<TSpec: EthSpec> Service<TSpec> {
             dial_addr(multiaddr.clone());
         }
 
-        // attempt to connect to any specified boot-nodes
-        let mut boot_nodes = config.boot_nodes_enr.clone();
-        boot_nodes.dedup();
+        let connect_to_enrs = |enrs| {
+            let mut enrs_deduped = config.boot_nodes_enr.clone();
+            enrs_deduped.dedup();
 
-        for bootnode_enr in boot_nodes {
-            for multiaddr in &bootnode_enr.multiaddr() {
-                // ignore udp multiaddr if it exists
-                let components = multiaddr.iter().collect::<Vec<_>>();
-                if let Protocol::Udp(_) = components[1] {
-                    continue;
-                }
+            for enr in enrs_deduped {
+                for multiaddr in &enr.multiaddr() {
+                    // ignore udp multiaddr if it exists
+                    let components = multiaddr.iter().collect::<Vec<_>>();
+                    if let Protocol::Udp(_) = components[1] {
+                        continue;
+                    }
 
-                if !network_globals
-                    .peers
-                    .read()
-                    .is_connected_or_dialing(&bootnode_enr.peer_id())
-                {
-                    dial_addr(multiaddr.clone());
+                    if !network_globals
+                        .peers
+                        .read()
+                        .is_connected_or_dialing(&bootnode_enr.peer_id())
+                    {
+                        dial_addr(multiaddr.clone());
+                    }
                 }
             }
+        };
+
+        //attempt to connect to any specified trusted peers
+        connect_to_enrs(config.trusted_peers_enr);
+        for multiaddr in &config.trusted_peers_multiaddr {
+            dial_addr(multiaddr.clone());
         }
 
+
+        // attempt to connect to any specified boot-nodes
+        connect_to_enrs(config.boot_nodes_enr);
         for multiaddr in &config.boot_nodes_multiaddr {
             // check TCP support for dialing
             if multiaddr
