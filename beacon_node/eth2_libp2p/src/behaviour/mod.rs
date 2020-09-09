@@ -37,6 +37,7 @@ use types::{EnrForkId, EthSpec, SignedBeaconBlock, SubnetId};
 use libp2p::gossipsub::{PeerScoreParams, PeerScoreThresholds, TopicScoreParams};
 use std::collections::HashMap;
 use std::time::Duration;
+use libp2p::gossipsub::time_cache::DuplicateCache;
 
 mod handler;
 
@@ -75,6 +76,9 @@ pub struct Behaviour<TSpec: EthSpec> {
     network_dir: PathBuf,
     /// Logger for behaviour actions.
     log: slog::Logger,
+
+    /// remembers the messages we published ourself for punishing replay attacks
+    published_message_ids: DuplicateCache<MessageId>,
 }
 
 /// Implements the combined behaviour for the libp2p service.
@@ -158,6 +162,7 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
             waker: None,
             network_dir: net_conf.network_dir.clone(),
             log: behaviour_log,
+            published_message_ids: DuplicateCache::new(Duration::from_secs(10)),
         })
     }
 
@@ -207,7 +212,7 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
                 mesh_message_deliveries_threshold: 14.0,
                 mesh_message_deliveries_cap: 139.0,
                 mesh_message_deliveries_activation: Duration::from_secs(4 * 32 * 12),
-                mesh_message_deliveries_window: Duration::from_millis(200),
+                mesh_message_deliveries_window: Duration::from_secs(2),
                 mesh_failure_penalty_weight: -0.718,
                 mesh_failure_penalty_decay: 0.9928,
                 invalid_message_deliveries_weight: -140.7315,
@@ -226,7 +231,7 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
                 mesh_message_deliveries_threshold: 12.0,
                 mesh_message_deliveries_cap: 390.0,
                 mesh_message_deliveries_activation: Duration::from_secs(4 * 12),
-                mesh_message_deliveries_window: Duration::from_millis(200),
+                mesh_message_deliveries_window: Duration::from_secs(2),
                 mesh_failure_penalty_weight: -0.977,
                 mesh_failure_penalty_decay: 0.631,
                 invalid_message_deliveries_weight: -140.7315,
@@ -245,7 +250,7 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
                 mesh_message_deliveries_threshold: 20.0,
                 mesh_message_deliveries_cap: 417.0,
                 mesh_message_deliveries_activation: Duration::from_secs(17 * 12),
-                mesh_message_deliveries_window: Duration::from_millis(200),
+                mesh_message_deliveries_window: Duration::from_secs(2),
                 mesh_failure_penalty_weight: -11.26,
                 mesh_failure_penalty_decay: 0.9532,
                 invalid_message_deliveries_weight: -4503.408,
@@ -345,7 +350,7 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
                 mesh_message_deliveries_threshold: 20.0,
                 mesh_message_deliveries_cap: 417.0,
                 mesh_message_deliveries_activation: Duration::from_secs(17 * 12),
-                mesh_message_deliveries_window: Duration::from_millis(200),
+                mesh_message_deliveries_window: Duration::from_secs(2),
                 mesh_failure_penalty_weight: -11.26,
                 mesh_failure_penalty_decay: 0.9532,
                 invalid_message_deliveries_weight: -4503.408,
@@ -417,27 +422,33 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
             for topic in message.topics(GossipEncoding::default(), self.enr_fork_id.fork_digest) {
                 match message.encode(GossipEncoding::default()) {
                     Ok(message_data) => {
-                        if let Err(e) = self.gossipsub.publish(topic.clone().into(), message_data) {
-                            slog::warn!(self.log, "Could not publish message"; "error" => format!("{:?}", e));
+                        match self.gossipsub.publish(topic.clone().into(), message_data) {
+                            Err(e) => {
+                                slog::warn!(self.log, "Could not publish message";
+                                            "error" => format!("{:?}", e));
 
-                            // add to metrics
-                            match topic.kind() {
-                                GossipKind::Attestation(subnet_id) => {
-                                    if let Some(v) = metrics::get_int_gauge(
-                                        &metrics::FAILED_ATTESTATION_PUBLISHES_PER_SUBNET,
-                                        &[&subnet_id.to_string()],
-                                    ) {
-                                        v.inc()
-                                    };
+                                // add to metrics
+                                match topic.kind() {
+                                    GossipKind::Attestation(subnet_id) => {
+                                        if let Some(v) = metrics::get_int_gauge(
+                                            &metrics::FAILED_ATTESTATION_PUBLISHES_PER_SUBNET,
+                                            &[&subnet_id.to_string()],
+                                        ) {
+                                            v.inc()
+                                        };
+                                    }
+                                    kind => {
+                                        if let Some(v) = metrics::get_int_gauge(
+                                            &metrics::FAILED_PUBLISHES_PER_MAIN_TOPIC,
+                                            &[&format!("{:?}", kind)],
+                                        ) {
+                                            v.inc()
+                                        };
+                                    }
                                 }
-                                kind => {
-                                    if let Some(v) = metrics::get_int_gauge(
-                                        &metrics::FAILED_PUBLISHES_PER_MAIN_TOPIC,
-                                        &[&format!("{:?}", kind)],
-                                    ) {
-                                        v.inc()
-                                    };
-                                }
+                            },
+                            Ok(msg_id) => {
+                                self.published_message_ids.insert(msg_id);
                             }
                         }
                     }
@@ -648,13 +659,31 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
                         }
                     }
                     Ok(msg) => {
-                        // Notify the network
-                        self.add_event(BehaviourEvent::PubsubMessage {
-                            id,
-                            source: propagation_source,
-                            topics: gs_msg.topics,
-                            message: msg,
-                        });
+                        if self.published_message_ids.contains(&id) {
+                            //the peer sent us back a message we published to them
+                            warn!(self.log,
+                                  "A peer sent us our published message back";
+                                  "message_id" => id.to_string(),
+                                  "peer_id" => propagation_source.to_string());
+                            if let Err(e) = self.gossipsub.report_message_validation_result(
+                                &id,
+                                &propagation_source,
+                                MessageAcceptance::Reject,
+                            ) {
+                                warn!(self.log, "Failed to report message validation";
+                                "message_id" => id.to_string(),
+                                "peer_id" => propagation_source.to_string(),
+                                "error" => format!("{:?}", e));
+                            }
+                        } else {
+                            // Notify the network
+                            self.add_event(BehaviourEvent::PubsubMessage {
+                                id,
+                                source: propagation_source,
+                                topics: gs_msg.topics,
+                                message: msg,
+                            });
+                        }
                     }
                 }
             }
