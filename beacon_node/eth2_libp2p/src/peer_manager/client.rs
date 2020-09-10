@@ -153,19 +153,33 @@ fn client_from_agent_version(agent_version: &str) -> (ClientKind, String, String
             let mut os_version = version.clone();
             if let Some(alpha_version) = agent_split.next() {
                 let mut alpha_split = alpha_version.split("-alpha.");
-                if alpha_split.next().is_some() {
-                    if let Some(a_version) = alpha_split.next() {
-                        if let Ok(a_v) = a_version.parse::<i32>() {
-                            if a_v > 23 {
-                                kind = ClientKind::Prysm;
-                            }
-                        }
-                    }
-                }
                 if let Some(agent_version) = agent_split.next() {
                     version = agent_version.into();
                     if let Some(agent_os_version) = agent_split.next() {
                         os_version = agent_os_version.into();
+                    }
+                }
+                if alpha_split.next().is_some() {
+                    if let Some(a_version) = alpha_split.next() {
+                        if let Ok(a_v) = a_version.parse::<i32>() {
+                            if a_v > 24 || (a_v == 24 && (
+                                    version == "a81214219dc57caa6a812ef5b656e910c1df37e3"
+                                        || version == "3de626f0d0d24179b4e4c42a27509e9651605d3a"
+                                        || version == "51f2cc18e5daca2c59b875cd8b380295888fc109"
+                                        || version == "f04fffb5fe4623660c32969735529da3df456209"
+                                        || version == "f4848e46d40862d3d16537f7a287db5c93b89215"
+                                        || version == "8baa22f0650b1c6bbb8bfeb54b2abc8bf05b51c5"
+                                        || version == "cb1f44872d806f095b40b0dac706a52478fbec85"
+                                        || version == "bd46abc71dc984f3c8d5e57ce744e006ae603535"
+                                        || version == "593442a0fa5c90db83edb32d13d6282d67d5792a"
+                                        || version == "6d837705340e3828ec4757fd8f4594a60a5f3dca"
+                                        || version == "a74cf5de909ed1d5a4638af9638d7a158fa700f8"
+                                        || version == "94fa046ce1d6d11d47a318eefd76dad5ba91dc50"
+                                        || version == "c8e93f87893d41ce7335de0c1ae2c786283d516a"
+                                )) {
+                                kind = ClientKind::Prysm;
+                            }
+                        }
                     }
                 }
             }
