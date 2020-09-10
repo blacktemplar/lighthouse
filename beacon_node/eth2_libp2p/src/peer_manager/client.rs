@@ -30,6 +30,7 @@ pub enum ClientKind {
     Teku,
     /// A Prysm node.
     Prysm,
+    PrysmOld,
     /// A lodestar node.
     Lodestar,
     /// An unknown client.
@@ -86,6 +87,12 @@ impl std::fmt::Display for Client {
                 "Prysm: version: {}, os_version: {}",
                 self.version, self.os_version
             ),
+            ClientKind::PrysmOld => write!(
+                f,
+                "Prysm Old: version: {}, os_version: {}",
+                self.version, self.os_version
+            ),
+
             ClientKind::Lodestar => write!(f, "Lodestar: version: {}", self.version),
             ClientKind::Unknown => {
                 if let Some(agent_string) = &self.agent_string {
@@ -136,15 +143,25 @@ fn client_from_agent_version(agent_version: &str) -> (ClientKind, String, String
             (kind, version, os_version)
         }
         Some("github.com") => {
-            let kind = ClientKind::Prysm;
+            let kind = ClientKind::PrysmOld;
             let unknown = String::from("unknown");
             (kind, unknown.clone(), unknown)
         }
         Some("Prysm") => {
-            let kind = ClientKind::Prysm;
+            let mut kind =  ClientKind::PrysmOld;
             let mut version = String::from("unknown");
             let mut os_version = version.clone();
-            if agent_split.next().is_some() {
+            if let Some(alpha_version) = agent_split.next() {
+                let mut alpha_split = alpha_version.split("-alpha.");
+                if alpha_split.next().is_some() {
+                    if let Some(a_version) = alpha_split.next() {
+                        if let Ok(a_v) = a_version.parse::<i32>() {
+                            if a_v > 23 {
+                                kind = ClientKind::Prysm;
+                            }
+                        }
+                    }
+                }
                 if let Some(agent_version) = agent_split.next() {
                     version = agent_version.into();
                     if let Some(agent_os_version) = agent_split.next() {
