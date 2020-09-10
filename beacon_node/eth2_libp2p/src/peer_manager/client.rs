@@ -176,6 +176,9 @@ fn client_from_agent_version(agent_version: &str) -> (ClientKind, String, String
                                         || version == "a74cf5de909ed1d5a4638af9638d7a158fa700f8"
                                         || version == "94fa046ce1d6d11d47a318eefd76dad5ba91dc50"
                                         || version == "c8e93f87893d41ce7335de0c1ae2c786283d516a"
+                                        || version == "6daf45cb8fbdf865b2a96c56dcfdd7fcd4b34028"
+                                        || version == "2d9fe5f2cfade9b0636b69d2064e588f2d5d7017"
+                                        || version == "114fac5149d8bf35b4b92f86034cc637840eb511"
                                 )) {
                                 kind = ClientKind::Prysm;
                             }
