@@ -224,7 +224,7 @@ fn spawn_service<T: BeaconChainTypes>(
                             .as_ref()
                             .map(|gauge| gauge.reset());
                     }
-                    update_gossip_metrics::<T::EthSpec>(&service.libp2p.swarm.gs(), &service.network_globals);
+                    update_gossip_metrics::<T::EthSpec>(&service.libp2p.swarm.gs(), &service.network_globals, &service.log);
                 }
                 // handle a message sent to the network
                 Some(message) = service.network_recv.recv() => {
@@ -474,7 +474,8 @@ fn expose_receive_metrics<T: EthSpec>(message: &PubsubMessage<T>) {
 }
 
 fn update_gossip_metrics<T: EthSpec>(gossipsub: &eth2_libp2p::Gossipsub,
-                                     network_globals: &Arc<NetworkGlobals<T>>) {
+                                     network_globals: &Arc<NetworkGlobals<T>>,
+                                     logger: &slog::Logger) {
     // Clear the metrics
     let _ = metrics::PEERS_PER_PROTOCOL
         .as_ref()
@@ -669,8 +670,12 @@ fn update_gossip_metrics<T: EthSpec>(gossipsub: &eth2_libp2p::Gossipsub,
                 .map_or("Unknown".to_string(), |peer_info| {
                     peer_info.client.kind.to_string()
                 });
-            scores_per_client.entry(client).or_default().push(
-                gossipsub.peer_score(peer_id).unwrap_or(0.0));
+            let score = gossipsub.peer_score(peer_id).unwrap_or(0.0);
+            if client != "PrysmOld" && score < 0.0 {
+                trace!(logger, "Peer has negative score"; "peer" => format!("{:?}", peer_id),
+                       "client" => &client, "score" => score);
+            }
+            scores_per_client.entry(client).or_default().push(score);
         }
     }
 
