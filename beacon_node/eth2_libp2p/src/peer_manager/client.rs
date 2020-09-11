@@ -200,6 +200,7 @@ fn client_from_agent_version(agent_version: &str) -> (ClientKind, String, String
                                 && version != "3316516d22cfbed13bf0f0b3b31295065acf68f6"
                                 && version != "12c1daaf2b32d4b2fd58737681bf877196971d61"
                                 && version != "f09620c9f609b36eb8b48bfa0224c6bfa72922a6"
+                                && version != "e47e7067c4ff973e6bf64c98cbc049e36c5da4cc"
                             ) {
                                 kind = ClientKind::Prysm;
                             }
