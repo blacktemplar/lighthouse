@@ -352,6 +352,15 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
             t_params.mesh_message_deliveries_activation = activation_window;
             t_params.mesh_message_deliveries_window = Duration::from_secs(2);
             t_params.mesh_failure_penalty_decay = t_params.mesh_message_deliveries_decay;
+        } else {
+            t_params.mesh_message_deliveries_weight = 0.0;
+            t_params.mesh_message_deliveries_threshold = 0.0;
+            t_params.mesh_message_deliveries_decay = 0.0;
+            t_params.mesh_message_deliveries_cap = 0.0;
+            t_params.mesh_message_deliveries_window = Duration::from_secs(0);
+            t_params.mesh_message_deliveries_activation = Duration::from_secs(0);
+            t_params.mesh_failure_penalty_decay = 0.0;
+            t_params.mesh_failure_penalty_weight = 0.0;
         }
 
         params.topics.insert(gossip_topic.hash(), t_params);
