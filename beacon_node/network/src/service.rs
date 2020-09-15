@@ -125,7 +125,7 @@ impl<T: BeaconChainTypes> NetworkService<T> {
 
         // launch libp2p service
         let (network_globals, mut libp2p) =
-            LibP2PService::new(executor.clone(), config, enr_fork_id, &network_log).await?;
+            LibP2PService::new(executor.clone(), config, enr_fork_id, &network_log, &beacon_chain.spec).await?;
 
         // Repopulate the DHT with stored ENR's.
         let enrs_to_load = load_dht::<T::EthSpec, T::HotStore, T::ColdStore>(store.clone());
