@@ -236,7 +236,7 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
                                Some((epoch * 2, 4.0, epoch)));
 
         Self::set_topic_params(GossipKind::Attestation(SubnetId::new(0)), &mut params, enr_fork_id,
-                               config, slot, 2.0 / 64.0,
+                               config, slot, 2.0 / spec.attestation_subnet_count as f64,
                                active_validators as f64 / spec.attestation_subnet_count as f64 /
                                    TSpec::slots_per_epoch() as f64,
                                epoch,
