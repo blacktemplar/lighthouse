@@ -24,6 +24,7 @@ pub struct Client {
 pub enum ClientKind {
     /// A lighthouse node (the best kind).
     Lighthouse,
+    LighthouseOld,
     /// A Nimbus node.
     Nimbus,
     /// A Teku node.
@@ -72,6 +73,11 @@ impl std::fmt::Display for Client {
                 "Lighthouse: version: {}, os_version: {}",
                 self.version, self.os_version
             ),
+            ClientKind::LighthouseOld => write!(
+                f,
+                "Lighthouse Old: version: {}, os_version: {}",
+                self.version, self.os_version
+            ),
             ClientKind::Teku => write!(
                 f,
                 "Teku: version: {}, os_version: {}",
@@ -117,13 +123,37 @@ fn client_from_agent_version(agent_version: &str) -> (ClientKind, String, String
     let mut agent_split = agent_version.split('/');
     match agent_split.next() {
         Some("Lighthouse") => {
-            let kind = ClientKind::Lighthouse;
+            let mut kind = ClientKind::LighthouseOld;
             let mut version = String::from("unknown");
             let mut os_version = version.clone();
             if let Some(agent_version) = agent_split.next() {
                 version = agent_version.into();
                 if let Some(agent_os_version) = agent_split.next() {
                     os_version = agent_os_version.into();
+                }
+
+                let mut version_split = version.split("-");
+                if let Some(version_parts) = version_split.next() {
+                    let mut version_parts_split = version_parts.split(".");
+                    if let Some(part1) = version_parts_split.next() {
+                        if part1.eq("v0") {
+                            if let Some(part2) = version_parts_split.next() {
+                                if let Ok(part2_i) = part2.parse::<i32>() {
+                                    if part2_i > 2 {
+                                        kind = ClientKind::Lighthouse;
+                                    } else if part2_i == 2 {
+                                        if let Some(part3) = version_parts_split.next() {
+                                            if let Ok(part3_i) = part3.parse::<i32>() {
+                                                if part3_i >= 10 {
+                                                    kind = ClientKind::Lighthouse;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
             (kind, version, os_version)
