@@ -193,7 +193,6 @@ fn client_from_agent_version(agent_version: &str) -> (ClientKind, String, String
                     if let Some(a_version) = alpha_split.next() {
                         if let Ok(a_v) = a_version.parse::<i32>() {
                             if a_v > 26 || (a_v == 26
-                                && version != "22bcfd2c340a8cb682468e5a7112404aee1e3849"
                                 && version != "ba440abe2de1b1d77ffb2c0ec3507bdd19475b18"
                                 && version != "09640ae22df05d9de4c4c69551a8f39c936a92b7"
                                 && version != "719e99ffd9d4dcb6dda56a21d00656b81b297ce5"
