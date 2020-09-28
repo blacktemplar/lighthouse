@@ -223,8 +223,21 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
 
         debug!(behaviour_log, "Using peer score params"; "params" => format!("{:?}", params));
 
+        let callback = |peer: &PeerId, topic: &TopicHash, time: f64| {
+            metrics::observe(&metrics::MESSAGE_DELIVERY_TIMES, time);
+            if let Some(m) = metrics::get_histogram(&metrics::MESSAGE_DELIVERY_TIMES_PER_TOPIC,
+                                                    &[&format!("{:?}", topic)]) {
+                m.observe(time);
+            }
+            if let Some(m) = metrics::get_histogram(&metrics::MESSAGE_DELIVERY_TIMES_PER_ID,
+                                                    &[&format!("{:?}", peer)]) {
+                m.observe(time);
+            }
+        };
+
         gossipsub
-            .with_peer_score(params.clone(), thresholds)
+            .with_peer_score_and_message_delivery_time_callback(params.clone(), thresholds,
+                                                                Some(callback))
             .expect("Valid score params and thresholds");
 
 
@@ -279,12 +292,12 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
                 }
             ))
         );
-        
+
         Ok((beacon_aggregate_proof_params, beacon_attestation_subnet_params))
     }
 
     pub fn update_gossipsub_parameters(&mut self, active_validators: usize) -> error::Result<()> {
-        let (beacon_aggregate_proof_params, beacon_attestation_subnet_params) = 
+        let (beacon_aggregate_proof_params, beacon_attestation_subnet_params) =
             Self::get_beacon_aggregate_proof_and_attestation_subnet_params(
                 active_validators,
                 &self.score_settings,
@@ -447,7 +460,7 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
             get_hash(GossipKind::BeaconAggregateAndProof),
             beacon_aggregate_proof_params
         );
-        
+
         for i in 0..score_settings.attestation_subnet_count {
             params.topics.insert(
                 get_hash(GossipKind::Attestation(SubnetId::new(i))),

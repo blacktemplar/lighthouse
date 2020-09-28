@@ -60,6 +60,7 @@ pub use prometheus::{
     Encoder, Gauge, GaugeVec, Histogram, HistogramVec, IntCounter, IntCounterVec, IntGauge,
     IntGaugeVec, Result, TextEncoder,
 };
+use prometheus::core::{GenericGauge, GenericGaugeVec, Atomic};
 
 /// Collect all the metrics for reporting.
 pub fn gather() -> Vec<prometheus::proto::MetricFamily> {
@@ -161,6 +162,23 @@ pub fn get_int_gauge(int_gauge_vec: &Result<IntGaugeVec>, name: &[&str]) -> Opti
     } else {
         None
     }
+}
+
+pub fn get_gauge<P: Atomic>(gauge_vec: &Result<GenericGaugeVec<P>>, name: &[&str])
+    -> Option<GenericGauge<P>> {
+    if let Ok(gauge_vec) = gauge_vec {
+        Some(gauge_vec.get_metric_with_label_values(name).ok()?)
+    } else {
+        None
+    }
+}
+
+pub fn set_gauge_entry<P: Atomic>(gauge_vec: &Result<GenericGaugeVec<P>>, name: &[&str],
+                                  value: P::T) {
+    if let Some(v) = get_gauge(gauge_vec, name)
+    {
+        v.set(value)
+    };
 }
 
 /// If `int_gauge_vec.is_ok()`, sets the gauge with the given `name` to the given `value`
