@@ -41,7 +41,7 @@ pub fn run_eth1_sim(matches: &ArgMatches) -> Result<(), String> {
         })
         .collect::<Vec<_>>();
 
-    let log_level = "debug";
+    let log_level = "error";
     let log_format = None;
 
     let mut env = EnvironmentBuilder::minimal()
