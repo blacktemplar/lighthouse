@@ -7,7 +7,7 @@ use std::cmp::max;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::time::Duration;
-use types::{ChainSpec, EnrForkId, EthSpec, SubnetId, Slot};
+use types::{ChainSpec, EnrForkId, EthSpec, Slot, SubnetId};
 
 const MAX_IN_MESH_SCORE: f64 = 10.0;
 const MAX_FIRST_MESSAGE_DELIVERIES_SCORE: f64 = 40.0;
@@ -68,7 +68,7 @@ impl<TSpec: EthSpec> PeerScoreSettings<TSpec> {
         active_validators: usize,
         thresholds: &PeerScoreThresholds,
         enr_fork_id: &EnrForkId,
-        current_slot: Slot
+        current_slot: Slot,
     ) -> error::Result<PeerScoreParams> {
         let mut params = PeerScoreParams::default();
 
@@ -131,14 +131,12 @@ impl<TSpec: EthSpec> PeerScoreSettings<TSpec> {
         );
 
         //dynamic topics
-        let (beacon_block_params, beacon_aggregate_proof_params,
-            beacon_attestation_subnet_params) =
+        let (beacon_block_params, beacon_aggregate_proof_params, beacon_attestation_subnet_params) =
             self.get_dynamic_topic_params(active_validators, current_slot)?;
 
-        params.topics.insert(
-            get_hash(GossipKind::BeaconBlock),
-            beacon_block_params,
-        );
+        params
+            .topics
+            .insert(get_hash(GossipKind::BeaconBlock), beacon_block_params);
 
         params.topics.insert(
             get_hash(GossipKind::BeaconAggregateAndProof),
@@ -158,7 +156,7 @@ impl<TSpec: EthSpec> PeerScoreSettings<TSpec> {
     pub fn get_dynamic_topic_params(
         &self,
         active_validators: usize,
-        current_slot: Slot
+        current_slot: Slot,
     ) -> error::Result<(TopicScoreParams, TopicScoreParams, TopicScoreParams)> {
         let (aggregators_per_slot, committees_per_slot) =
             self.expected_aggregator_count_per_slot(active_validators)?;
@@ -300,8 +298,8 @@ impl<TSpec: EthSpec> PeerScoreSettings<TSpec> {
         );
         t_params.first_message_deliveries_weight = 40.0 / t_params.first_message_deliveries_cap;
 
-        if let Some((decay_slots, cap_factor, activation_window,
-                        current_slot)) = mesh_message_info {
+        if let Some((decay_slots, cap_factor, activation_window, current_slot)) = mesh_message_info
+        {
             let decay_time = self.slot * decay_slots as u32;
             t_params.mesh_message_deliveries_decay = self.score_parameter_decay(decay_time);
             t_params.mesh_message_deliveries_threshold = Self::threshold(
@@ -309,7 +307,11 @@ impl<TSpec: EthSpec> PeerScoreSettings<TSpec> {
                 expected_message_rate / 50.0,
             );
             t_params.mesh_message_deliveries_cap =
-                cap_factor * t_params.mesh_message_deliveries_threshold;
+                if cap_factor * t_params.mesh_message_deliveries_threshold < 2.0 {
+                    2.0
+                } else {
+                    cap_factor * t_params.mesh_message_deliveries_threshold
+                };
             t_params.mesh_message_deliveries_activation = activation_window;
             t_params.mesh_message_deliveries_window = Duration::from_secs(2);
             t_params.mesh_failure_penalty_decay = t_params.mesh_message_deliveries_decay;

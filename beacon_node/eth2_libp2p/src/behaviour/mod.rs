@@ -25,7 +25,8 @@ use libp2p::{
     },
     PeerId,
 };
-use slog::{crit, debug, info, o, trace, warn, error};
+use rand::Rng;
+use slog::{crit, debug, error, info, o, trace, warn};
 use ssz::Encode;
 use std::fs::File;
 use std::io::Write;
@@ -36,8 +37,7 @@ use std::{
     sync::Arc,
     task::{Context, Poll},
 };
-use types::{ChainSpec, EnrForkId, EthSpec, SignedBeaconBlock, SubnetId, Slot};
-use rand::Rng;
+use types::{ChainSpec, EnrForkId, EthSpec, SignedBeaconBlock, Slot, SubnetId};
 
 mod gossipsub_scoring_parameters;
 mod handler;
@@ -153,12 +153,8 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
             .eth2()
             .expect("Local ENR must have a fork id");
 
-        let log_id = rand::thread_rng().gen();
-
-        error!(behaviour_log, "Create gossipsub behaviour with log id"; "log_id" => log_id);
-
         let mut gossipsub =
-            Gossipsub::new(MessageAuthenticity::Anonymous, net_conf.gs_config.clone(), log_id)
+            Gossipsub::new(MessageAuthenticity::Anonymous, net_conf.gs_config.clone())
                 .map_err(|e| format!("Could not construct gossipsub: {:?}", e))?;
 
         //we don't know the number of active validators and the current slot yet
@@ -180,7 +176,7 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
             active_validators,
             &thresholds,
             &enr_fork_id,
-            current_slot
+            current_slot,
         )?;
 
         debug!(behaviour_log, "Using peer score params"; "params" => format!("{:?}", params));
@@ -206,12 +202,14 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
         })
     }
 
-    pub fn update_gossipsub_parameters(&mut self, active_validators: usize,
-                                       current_slot: Slot) -> error::Result<()> {
-        let (beacon_block_params, beacon_aggregate_proof_params,
-            beacon_attestation_subnet_params) = self
-            .score_settings
-            .get_dynamic_topic_params(active_validators, current_slot)?;
+    pub fn update_gossipsub_parameters(
+        &mut self,
+        active_validators: usize,
+        current_slot: Slot,
+    ) -> error::Result<()> {
+        let (beacon_block_params, beacon_aggregate_proof_params, beacon_attestation_subnet_params) =
+            self.score_settings
+                .get_dynamic_topic_params(active_validators, current_slot)?;
 
         let fork_digest = self.enr_fork_id.fork_digest;
         let get_topic = |kind: GossipKind| -> Topic {
@@ -225,10 +223,8 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
             "beacon_attestation_subnet_params" => format!("{:?}", beacon_attestation_subnet_params),
         );
 
-        self.gossipsub.set_topic_params(
-            get_topic(GossipKind::BeaconBlock),
-            beacon_block_params,
-        )?;
+        self.gossipsub
+            .set_topic_params(get_topic(GossipKind::BeaconBlock), beacon_block_params)?;
 
         self.gossipsub.set_topic_params(
             get_topic(GossipKind::BeaconAggregateAndProof),
