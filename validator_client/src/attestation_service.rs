@@ -5,7 +5,7 @@ use crate::{
 use environment::RuntimeContext;
 use eth2::BeaconNodeHttpClient;
 use futures::StreamExt;
-use slog::{crit, error, info, trace};
+use slog::{crit, error, info, trace, debug};
 use slot_clock::SlotClock;
 use std::collections::HashMap;
 use std::ops::Deref;
@@ -482,16 +482,24 @@ impl<T: SlotClock + 'static, E: EthSpec> AttestationService<T, E> {
                 .post_validator_aggregate_and_proof(&signed_aggregate_and_proof)
                 .await
             {
-                Ok(()) => info!(
-                    log,
-                    "Successfully published attestation";
+                Ok(()) => {
+                    info!(
+                        log,
+                        "Successfully published attestation";
                     "aggregator" => signed_aggregate_and_proof.message.aggregator_index,
-                    "signatures" => attestation.aggregation_bits.num_set_bits(),
-                    "head_block" => format!("{:?}", attestation.data.beacon_block_root),
-                    "committee_index" => attestation.data.index,
-                    "slot" => attestation.data.slot.as_u64(),
-                    "type" => "aggregated",
-                ),
+                        "signatures" => attestation.aggregation_bits.num_set_bits(),
+                        "head_block" => format!("{:?}", attestation.data.beacon_block_root),
+                        "committee_index" => attestation.data.index,
+                        "slot" => attestation.data.slot.as_u64(),
+                        "type" => "aggregated",
+                    );
+                    debug!(
+                        log,
+                        "Successfully published aggregated attestation";
+                        "aggregation_bits" =>
+                            format!("{:?}", attestation.aggregation_bits.as_slice()),
+                    )
+                }
                 Err(e) => crit!(
                     log,
                     "Failed to publish attestation";
