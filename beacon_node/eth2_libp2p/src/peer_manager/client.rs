@@ -139,16 +139,8 @@ fn client_from_agent_version(agent_version: &str) -> (ClientKind, String, String
                         if part1.eq("v0") {
                             if let Some(part2) = version_parts_split.next() {
                                 if let Ok(part2_i) = part2.parse::<i32>() {
-                                    if part2_i > 2 {
+                                    if part2_i >= 3 {
                                         kind = ClientKind::Lighthouse;
-                                    } else if part2_i == 2 {
-                                        if let Some(part3) = version_parts_split.next() {
-                                            if let Ok(part3_i) = part3.parse::<i32>() {
-                                                if part3_i >= 10 {
-                                                    kind = ClientKind::Lighthouse;
-                                                }
-                                            }
-                                        }
                                     }
                                 }
                             }
