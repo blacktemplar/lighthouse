@@ -139,8 +139,30 @@ fn client_from_agent_version(agent_version: &str) -> (ClientKind, String, String
                         if part1.eq("v0") {
                             if let Some(part2) = version_parts_split.next() {
                                 if let Ok(part2_i) = part2.parse::<i32>() {
-                                    if part2_i >= 3 {
+                                    if part2_i > 3 {
                                         kind = ClientKind::Lighthouse;
+                                    } else if part2_i == 3 {
+                                        if let Some(hash) = version_split.next() {
+                                            if !"467de4c8d0bab31bcbbe2d830af31fd3ecedda75"
+                                                .starts_with(hash)
+                                                && !"95c96ac567474df2abb4e9da9f5e771cf5a7426d"
+                                                    .starts_with(hash)
+                                                && !"e9d5bade367e4720a0ceea9d15fe994256f5ead6"
+                                                    .starts_with(hash)
+                                                && !"83ae12a1b4719f073ccc3db473ac3a05cf51ac54"
+                                                    .starts_with(hash)
+                                                && !"99a02fd2ab01d7af5783b8e39d3262e78df58fab"
+                                                    .starts_with(hash)
+                                                && !"b185d7bbd84deade495dbb5de4a57ff42d544194"
+                                                    .starts_with(hash)
+                                                && !"0e4cc502626ad98d8311d79033063511ce16734b"
+                                                    .starts_with(hash)
+                                                && !"db3e0578e9559ab352d64e4f84c058786bdd5ffb"
+                                                    .starts_with(hash)
+                                            {
+                                                kind = ClientKind::Lighthouse
+                                            }
+                                        }
                                     }
                                 }
                             }
