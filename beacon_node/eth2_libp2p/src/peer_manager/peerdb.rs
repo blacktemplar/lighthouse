@@ -136,20 +136,16 @@ impl<TSpec: EthSpec> PeerDB<TSpec> {
 
     /// Returns if the peer is already connected.
     pub fn is_connected(&self, peer_id: &PeerId) -> bool {
-        if let Some(PeerConnectionStatus::Connected { .. }) = self.connection_status(peer_id) {
-            true
-        } else {
-            false
-        }
+        matches!(
+            self.connection_status(peer_id),
+            Some(PeerConnectionStatus::Connected { .. })
+        )
     }
 
     /// If we are connected or currently dialing the peer returns true.
     pub fn is_connected_or_dialing(&self, peer_id: &PeerId) -> bool {
-        match self.connection_status(peer_id) {
-            Some(PeerConnectionStatus::Connected { .. })
-            | Some(PeerConnectionStatus::Dialing { .. }) => true,
-            _ => false,
-        }
+        matches!(self.connection_status(peer_id), Some(PeerConnectionStatus::Connected { .. })
+             | Some(PeerConnectionStatus::Dialing { .. }))
     }
     /// Returns true if the peer is synced at least to our current head.
     pub fn is_synced(&self, peer_id: &PeerId) -> bool {
@@ -369,7 +365,7 @@ impl<TSpec: EthSpec> PeerDB<TSpec> {
         }
         self.banned_peers_count
             .remove_banned_peer(&info.connection_status);
-        info.connection_status.connect_ingoing();
+        info.connect_ingoing();
 
         // Add the seen ip address to the peer's info
         if let Some(ip_addr) = multiaddr.iter().find_map(|p| match p {
@@ -390,7 +386,7 @@ impl<TSpec: EthSpec> PeerDB<TSpec> {
         }
         self.banned_peers_count
             .remove_banned_peer(&info.connection_status);
-        info.connection_status.connect_outgoing();
+        info.connect_outgoing();
 
         // Add the seen ip address to the peer's info
         if let Some(ip_addr) = multiaddr.iter().find_map(|p| match p {
