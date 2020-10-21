@@ -143,6 +143,7 @@ fn client_from_agent_version(agent_version: &str) -> (ClientKind, String, String
                                         kind = ClientKind::Lighthouse;
                                     } else if part2_i == 3 {
                                         if let Some(hash) = version_split.next() {
+                                            let hash = hash.trim_end_matches('+');
                                             if !"467de4c8d0bab31bcbbe2d830af31fd3ecedda75"
                                                 .starts_with(hash)
                                                 && !"95c96ac567474df2abb4e9da9f5e771cf5a7426d"
