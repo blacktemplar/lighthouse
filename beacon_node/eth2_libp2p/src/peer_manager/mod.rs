@@ -11,7 +11,7 @@ use futures::Stream;
 use hashset_delay::HashSetDelay;
 use libp2p::core::multiaddr::Protocol as MProtocol;
 use libp2p::identify::IdentifyInfo;
-use slog::{crit, debug, error};
+use slog::{crit, debug, error, trace};
 use smallvec::SmallVec;
 use std::{
     net::SocketAddr,
@@ -788,6 +788,16 @@ impl<TSpec: EthSpec> PeerManager<TSpec> {
 
         // Updates peer's scores.
         self.update_peer_scores();
+
+        // trace log peer's scores
+        trace!(self.log, "Lighthouse Peer Scores: {:?}", {
+            self
+                .network_globals.peers
+                .read()
+                .peers()
+                .map(|(id, info)| (id.clone(), info.score().score()))
+                .collect::<HashMap<PeerId, f64>>()
+        });
 
         // Keep a list of peers we are disconnecting
         let mut disconnecting_peers = Vec::new();
