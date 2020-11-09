@@ -5,7 +5,7 @@ use crate::{
 use environment::RuntimeContext;
 use eth2::BeaconNodeHttpClient;
 use futures::StreamExt;
-use slog::{crit, error, info, trace, debug};
+use slog::{crit, debug, error, info, trace};
 use slot_clock::SlotClock;
 use std::collections::HashMap;
 use std::ops::Deref;

@@ -1079,6 +1079,12 @@ impl<TSpec: EthSpec> NetworkBehaviour for Behaviour<TSpec> {
                 .peer_info(peer_id)
                 .map(|info| info.client.kind.clone())
             {
+                trace!(
+                    self.log,
+                    "Disconnect peer with kind";
+                    "peer_id" => format!("{}", peer_id),
+                    "kind" => format!("{}", kind),
+                );
                 if let Some(v) =
                     metrics::get_int_gauge(&metrics::PEERS_PER_CLIENT, &[&kind.to_string()])
                 {

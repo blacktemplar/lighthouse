@@ -334,6 +334,13 @@ impl<TSpec: EthSpec> PeerManager<TSpec> {
             peer_info.listening_addresses = info.listen_addrs.clone();
 
             if previous_kind != peer_info.client.kind {
+                trace!(
+                    self.log,
+                    "Identify switching peer kind";
+                    "peer_id" => format!("{}", peer_id),
+                    "previous_kind" => format!("{}", previous_kind),
+                    "new_kind" => format!("{}", peer_info.client.kind),
+                );
                 // update the peer client kind metric
                 if let Some(v) = metrics::get_int_gauge(
                     &metrics::PEERS_PER_CLIENT,
@@ -657,6 +664,12 @@ impl<TSpec: EthSpec> PeerManager<TSpec> {
             .peer_info(peer_id)
             .map(|peer_info| peer_info.client.kind.clone())
         {
+            trace!(
+                self.log,
+                "Connect peer with kind";
+                "peer_id" => format!("{}", peer_id),
+                "kind" => format!("{}", kind),
+            );
             if let Some(v) =
                 metrics::get_int_gauge(&metrics::PEERS_PER_CLIENT, &[&kind.to_string()])
             {
@@ -793,8 +806,8 @@ impl<TSpec: EthSpec> PeerManager<TSpec> {
 
         // trace log peer's scores
         trace!(self.log, "Lighthouse Peer Scores: {:?}", {
-            self
-                .network_globals.peers
+            self.network_globals
+                .peers
                 .read()
                 .peers()
                 .map(|(id, info)| (id.clone(), info.score().score()))
