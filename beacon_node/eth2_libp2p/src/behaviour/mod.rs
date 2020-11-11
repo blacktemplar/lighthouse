@@ -200,10 +200,9 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
             current_slot,
         )?;
 
-        debug!(behaviour_log, "Using peer score params"; "params" => format!("{:?}", params));
+        trace!(behaviour_log, "Using peer score params"; "params" => format!("{:?}", params));
 
-        let update_gossipsub_scores =
-            tokio::time::interval(tokio::time::Duration::from(params.decay_interval));
+        let update_gossipsub_scores = tokio::time::interval(params.decay_interval);
 
         gossipsub
             .with_peer_score(params.clone(), thresholds)
@@ -241,8 +240,9 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
             GossipTopic::new(kind, GossipEncoding::default(), fork_digest).into()
         };
 
-        debug!(self.log, "Updating gossipsub scores";
-            "active_validators" => active_validators,
+        debug!(self.log, "Updating gossipsub score parameters";
+            "active_validators" => active_validators);
+        trace!(self.log, "Updated gossipsub score parameters";
             "beacon_block_params" => format!("{:?}", beacon_block_params),
             "beacon_aggregate_proof_params" => format!("{:?}", beacon_aggregate_proof_params),
             "beacon_attestation_subnet_params" => format!("{:?}", beacon_attestation_subnet_params),
