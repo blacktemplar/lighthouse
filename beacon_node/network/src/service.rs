@@ -513,20 +513,19 @@ fn spawn_service<T: BeaconChainTypes>(
                                     // attestation information gets processed in the attestation service
                                     PubsubMessage::Attestation(ref subnet_and_attestation) => {
                                         let subnet_id: u64 = subnet_and_attestation.0.into();
-                                        if subnet_id == 1 {
-                                            let mut val_index = -1;
-                                            for i in 0..subnet_and_attestation.1.aggregation_bits.len() {
-                                                if subnet_and_attestation.1.aggregation_bits.get(i).unwrap() {
-                                                    val_index = i as i32;
-                                                    break;
-                                                }
+                                        let mut val_index = -1;
+                                        for i in 0..subnet_and_attestation.1.aggregation_bits.len() {
+                                            if subnet_and_attestation.1.aggregation_bits.get(i).unwrap() {
+                                                val_index = i as i32;
+                                                break;
                                             }
-                                            warn!(service.log, "Received attestation";
-                                                "gs-message-id" => format!("{}", id),
-                                                "slot" => format!("{}", subnet_and_attestation.1.data.slot),
-                                                "val-index" => val_index,
-                                            );
                                         }
+                                        warn!(service.log, "Received attestation";
+                                            "gs-message-id" => format!("{}", id),
+                                            "subnet" => subnet_id,
+                                            "slot" => format!("{}", subnet_and_attestation.1.data.slot),
+                                            "val-index" => val_index,
+                                        );
                                         let subnet = subnet_and_attestation.0;
                                         let attestation = &subnet_and_attestation.1;
                                         // checks if we have an aggregator for the slot. If so, we should process
