@@ -492,7 +492,8 @@ fn aggregated_gossip_verification() {
             )
         },
         AttnError::InvalidSelectionProof {
-            aggregator_index: index
+            aggregator_index: index,
+            ..
         }
         if index == non_aggregator_index as u64
     );

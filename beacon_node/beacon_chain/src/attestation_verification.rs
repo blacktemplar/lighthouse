@@ -49,10 +49,7 @@ use state_processing::{
 };
 use std::borrow::Cow;
 use tree_hash::TreeHash;
-use types::{
-    Attestation, BeaconCommittee, CommitteeIndex, Epoch, EthSpec, Hash256, IndexedAttestation,
-    SelectionProof, SignedAggregateAndProof, Slot, SubnetId,
-};
+use types::{Attestation, BeaconCommittee, CommitteeIndex, Epoch, EthSpec, Hash256, IndexedAttestation, SelectionProof, SignedAggregateAndProof, Slot, SubnetId, Signature};
 
 /// Returned when an attestation was not successfully verified. It might not have been verified for
 /// two reasons:
@@ -94,7 +91,7 @@ pub enum Error {
     /// ## Peer scoring
     ///
     /// The peer has sent an invalid message.
-    InvalidSelectionProof { aggregator_index: u64 },
+    InvalidSelectionProof { aggregator_index: u64, selection_proof: Signature},
     /// The `selection_proof` on the aggregate attestation selects it as a validator, however the
     /// aggregator index is not in the committee for that attestation.
     ///
@@ -523,7 +520,8 @@ impl<T: BeaconChainTypes> VerifiedAggregatedAttestation<T> {
                     .is_aggregator(committee.committee.len(), &chain.spec)
                     .map_err(|e| Error::BeaconChainError(e.into()))?
                 {
-                    return Err(Error::InvalidSelectionProof { aggregator_index });
+                    return Err(Error::InvalidSelectionProof { aggregator_index,
+                        selection_proof: signed_aggregate.message.selection_proof.clone() });
                 }
 
                 // Ensure the aggregator is a member of the committee for which it is aggregating.
