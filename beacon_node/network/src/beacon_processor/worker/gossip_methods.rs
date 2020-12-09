@@ -136,6 +136,17 @@ impl<T: BeaconChainTypes> Worker<T> {
     ) {
         let beacon_block_root = aggregate.message.aggregate.data.beacon_block_root;
 
+        let aggregator_index = aggregate.message.aggregator_index;
+        let selection_proof = &aggregate.message.selection_proof;
+        trace!(
+            self.log,
+            "Verify aggregated attestation";
+            "block" => %beacon_block_root,
+            "peer_id" => %peer_id,
+            "type" => "aggregated",
+            "aggregator_index" => aggregator_index,
+            "selection_proof" => ?selection_proof,
+        );
         let aggregate = match self
             .chain
             .verify_aggregated_attestation_for_gossip(aggregate)
