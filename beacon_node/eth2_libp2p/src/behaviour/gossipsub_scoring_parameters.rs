@@ -326,6 +326,22 @@ impl<TSpec: EthSpec> PeerScoreSettings<TSpec> {
                 t_params.mesh_message_deliveries_threshold = 0.0;
                 t_params.mesh_message_deliveries_weight = 0.0;
             }
+            t_params.mesh_promise_relative_threshold = 0.5;
+            t_params.mesh_promise_weight = -self.max_positive_score
+                / (t_params.topic_weight
+                    * (1.0 - t_params.mesh_promise_relative_threshold).powi(2));
+            t_params.mesh_promise_min_total = 5.0;
+            t_params.mesh_promise_window = Duration::from_secs(2);
+
+            // to compare with mesh_message_deliveries we use the same decay
+            t_params.mesh_promise_decay = t_params.mesh_message_deliveries_decay;
+
+            // we target a total of 10 promises but keep a minimum probability of 10%
+            t_params.mesh_promise_probability =
+                10.0 / Self::decay_convergence(t_params.mesh_promise_decay, expected_message_rate);
+            if t_params.mesh_promise_probability > 0.1 {
+                t_params.mesh_promise_probability = 0.1;
+            }
         } else {
             t_params.mesh_message_deliveries_weight = 0.0;
             t_params.mesh_message_deliveries_threshold = 0.0;
@@ -335,6 +351,7 @@ impl<TSpec: EthSpec> PeerScoreSettings<TSpec> {
             t_params.mesh_message_deliveries_activation = Duration::from_secs(0);
             t_params.mesh_failure_penalty_decay = 0.0;
             t_params.mesh_failure_penalty_weight = 0.0;
+            t_params.mesh_promise_weight = 0.0;
         }
 
         t_params.invalid_message_deliveries_weight =
