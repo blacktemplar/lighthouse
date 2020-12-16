@@ -13,7 +13,7 @@ use handler::{BehaviourHandler, BehaviourHandlerIn, DelegateIn, DelegateOut};
 use libp2p::gossipsub::subscription_filter::{
     MaxCountSubscriptionFilter, WhitelistSubscriptionFilter,
 };
-use libp2p::gossipsub::PeerScoreThresholds;
+use libp2p::gossipsub::{PeerScoreThresholds, TopicScoreParams};
 use libp2p::{
     core::{
         connection::{ConnectedPoint, ConnectionId, ListenerId},
@@ -255,6 +255,19 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
             "beacon_block_params" => ?beacon_block_params,
             "beacon_aggregate_proof_params" => ?beacon_aggregate_proof_params,
             "beacon_attestation_subnet_params" => ?beacon_attestation_subnet_params,
+        );
+        // inverse threshold calculation by using threshold with 1 - decay
+        let expected_rate = |params: &TopicScoreParams| {
+            PeerScoreSettings::<TSpec>::threshold(
+                1.0 - params.mesh_message_deliveries_decay,
+                params.mesh_message_deliveries_threshold,
+            ) * 50.0
+        };
+
+        trace!(self.log, "Expected message rates";
+            "beacon_block" => expected_rate(&beacon_block_params),
+            "beacon_aggregate_proof_params" => expected_rate(&beacon_aggregate_proof_params),
+            "beacon_attestation_subnet_params" => expected_rate(&beacon_attestation_subnet_params),
         );
 
         self.gossipsub

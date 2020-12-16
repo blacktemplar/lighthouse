@@ -235,7 +235,7 @@ impl<TSpec: EthSpec> PeerScoreSettings<TSpec> {
         rate / (1.0 - decay)
     }
 
-    fn threshold(decay: f64, rate: f64) -> f64 {
+    pub fn threshold(decay: f64, rate: f64) -> f64 {
         Self::decay_convergence(decay, rate) * decay
     }
 
