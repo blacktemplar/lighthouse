@@ -639,6 +639,11 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
                 message_id: id,
                 message: gs_msg,
             } => {
+                metrics::inc_counter_vec(
+                    &metrics::GOSSIP_MESSAGES_PER_TOPIC,
+                    &[gs_msg.topic.as_str()],
+                );
+
                 // Note: We are keeping track here of the peer that sent us the message, not the
                 // peer that originally published the message.
                 match PubsubMessage::decode(&gs_msg.topic, gs_msg.data()) {
