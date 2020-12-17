@@ -158,7 +158,7 @@ impl<TSpec: EthSpec> PeerManager<TSpec> {
             metrics::inc_counter_vec(
                 &metrics::PEER_ACTION_EVENTS_PER_CLIENT,
                 &[
-                    info.client.kind.as_static_ref(),
+                    info.client.kind.as_static_str(),
                     PeerAction::Fatal.as_static_str(),
                     source.into(),
                 ],
@@ -194,7 +194,7 @@ impl<TSpec: EthSpec> PeerManager<TSpec> {
                 metrics::inc_counter_vec(
                     &metrics::PEER_ACTION_EVENTS_PER_CLIENT,
                     &[
-                        info.client.kind.as_static_ref(),
+                        info.client.kind.as_static_str(),
                         action.as_static_str(),
                         source.into(),
                     ],
@@ -374,13 +374,13 @@ impl<TSpec: EthSpec> PeerManager<TSpec> {
                 // update the peer client kind metric
                 if let Some(v) = metrics::get_int_gauge(
                     &metrics::PEERS_PER_CLIENT,
-                    &[&peer_info.client.kind.to_string()],
+                    &[peer_info.client.kind.as_static_str()],
                 ) {
                     v.inc()
                 };
                 if let Some(v) = metrics::get_int_gauge(
                     &metrics::PEERS_PER_CLIENT,
-                    &[&previous_kind.to_string()],
+                    &[previous_kind.as_static_str()],
                 ) {
                     v.dec()
                 };
@@ -407,7 +407,7 @@ impl<TSpec: EthSpec> PeerManager<TSpec> {
         metrics::inc_counter_vec(
             &metrics::TOTAL_RPC_ERRORS_PER_CLIENT,
             &[
-                client.kind.as_static_ref(),
+                client.kind.as_static_str(),
                 err.as_static_str(),
                 direction.as_static_str(),
             ],
@@ -784,7 +784,7 @@ impl<TSpec: EthSpec> PeerManager<TSpec> {
             .map(|peer_info| peer_info.client.kind.clone())
         {
             if let Some(v) =
-                metrics::get_int_gauge(&metrics::PEERS_PER_CLIENT, &[&kind.to_string()])
+                metrics::get_int_gauge(&metrics::PEERS_PER_CLIENT, &[kind.as_static_str()])
             {
                 v.inc()
             };

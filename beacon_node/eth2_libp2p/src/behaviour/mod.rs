@@ -441,7 +441,7 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
                 .peers
                 .read()
                 .peer_info(propagation_source)
-                .map(|info| info.client.kind.as_static_ref())
+                .map(|info| info.client.kind.as_static_str())
             {
                 metrics::inc_counter_vec(
                     &metrics::GOSSIP_UNACCEPTED_MESSAGES_PER_CLIENT,
@@ -1137,7 +1137,7 @@ impl<TSpec: EthSpec> NetworkBehaviour for Behaviour<TSpec> {
                 .map(|info| info.client.kind.clone())
             {
                 if let Some(v) =
-                    metrics::get_int_gauge(&metrics::PEERS_PER_CLIENT, &[&kind.to_string()])
+                    metrics::get_int_gauge(&metrics::PEERS_PER_CLIENT, &[kind.as_static_str()])
                 {
                     v.dec()
                 };
