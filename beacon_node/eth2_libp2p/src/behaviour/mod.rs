@@ -6,8 +6,8 @@ use crate::peer_manager::{
 use crate::rpc::*;
 use crate::service::METADATA_FILENAME;
 use crate::types::{GossipEncoding, GossipKind, GossipTopic, MessageData, SubnetDiscovery};
-use crate::Eth2Enr;
 use crate::{error, metrics, Enr, NetworkConfig, NetworkGlobals, PubsubMessage, TopicHash};
+use crate::{Eth2Enr, SemanticMessageId};
 use futures::prelude::*;
 use handler::{BehaviourHandler, BehaviourHandlerIn, DelegateIn, DelegateOut};
 use libp2p::gossipsub::subscription_filter::{
@@ -442,6 +442,7 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
         propagation_source: &PeerId,
         message_id: MessageId,
         validation_result: MessageAcceptance,
+        semantic_id: Option<SemanticMessageId>,
     ) {
         if let Some(result) = match validation_result {
             MessageAcceptance::Accept => None,
@@ -462,11 +463,15 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
             }
         }
 
-        if let Err(e) = self.gossipsub.report_message_validation_result(
-            &message_id,
-            propagation_source,
-            validation_result,
-        ) {
+        if let Err(e) = self
+            .gossipsub
+            .report_message_validation_result_with_semantic_id(
+                &message_id,
+                propagation_source,
+                validation_result,
+                semantic_id,
+            )
+        {
             warn!(self.log, "Failed to report message validation"; "message_id" => %message_id, "peer_id" => %propagation_source, "error" => ?e);
         }
     }

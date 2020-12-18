@@ -4,7 +4,9 @@ use beacon_chain::{
     attestation_verification::Error as AttnError, observed_operations::ObservationOutcome,
     BeaconChainError, BeaconChainTypes, BlockError, ForkChoiceError,
 };
-use eth2_libp2p::{MessageAcceptance, MessageId, PeerAction, PeerId, ReportSource};
+use eth2_libp2p::{
+    MessageAcceptance, MessageId, PeerAction, PeerId, ReportSource, SemanticMessageId,
+};
 use slog::{debug, error, info, trace, warn};
 use ssz::Encode;
 use types::{
@@ -38,10 +40,26 @@ impl<T: BeaconChainTypes> Worker<T> {
         propagation_source: PeerId,
         validation_result: MessageAcceptance,
     ) {
+        self.propagate_validation_result_with_semantic_id(
+            message_id,
+            propagation_source,
+            validation_result,
+            None,
+        );
+    }
+
+    fn propagate_validation_result_with_semantic_id(
+        &self,
+        message_id: MessageId,
+        propagation_source: PeerId,
+        validation_result: MessageAcceptance,
+        semantic_id: Option<SemanticMessageId>,
+    ) {
         self.send_network_message(NetworkMessage::ValidationResult {
             propagation_source,
             message_id,
             validation_result,
+            semantic_id,
         })
     }
 
@@ -160,7 +178,14 @@ impl<T: BeaconChainTypes> Worker<T> {
 
         // Indicate to the `Network` service that this message is valid and can be
         // propagated on the gossip network.
-        self.propagate_validation_result(message_id, peer_id.clone(), MessageAcceptance::Accept);
+        self.propagate_validation_result_with_semantic_id(
+            message_id,
+            peer_id.clone(),
+            MessageAcceptance::Accept,
+            Some(SemanticMessageId::new(
+                aggregate.attestation_root().as_bytes(),
+            )),
+        );
 
         metrics::inc_counter(&metrics::BEACON_PROCESSOR_AGGREGATED_ATTESTATION_VERIFIED_TOTAL);
 
@@ -601,7 +626,7 @@ impl<T: BeaconChainTypes> Worker<T> {
                 );
                 self.gossip_penalize_peer(peer_id.clone(), PeerAction::LowToleranceError);
             }
-            AttnError::AttestationAlreadyKnown { .. } => {
+            AttnError::AttestationAlreadyKnown(attestation_root) => {
                 /*
                  * The aggregate attestation has already been observed on the network or in
                  * a block.
@@ -614,8 +639,15 @@ impl<T: BeaconChainTypes> Worker<T> {
                     "peer_id" => %peer_id,
                     "block" => %beacon_block_root,
                     "type" => ?attestation_type,
+                    "attestation_root" => ?attestation_root,
                 );
-                self.propagate_validation_result(message_id, peer_id, MessageAcceptance::Ignore);
+                // we use a semantic id for this case
+                self.propagate_validation_result_with_semantic_id(
+                    message_id,
+                    peer_id,
+                    MessageAcceptance::Ignore,
+                    Some(SemanticMessageId::new(attestation_root.as_bytes())),
+                );
                 return;
             }
             AttnError::AggregatorAlreadyKnown(_) => {
