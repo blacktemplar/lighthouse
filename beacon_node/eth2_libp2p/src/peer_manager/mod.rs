@@ -924,6 +924,12 @@ impl<TSpec: EthSpec> PeerManager<TSpec> {
         let connected_peer_count = self.network_globals.connected_peers();
         if connected_peer_count > self.target_peers {
             //remove excess peers with the worst scores, but keep subnet peers
+            trace!(self.log, "Removing excess peers"; "peers_info" => format!("{:?}", self
+                .network_globals
+                .peers
+                .read()
+                .worst_connected_peers()
+            ));
             for (peer_id, _) in self
                 .network_globals
                 .peers
