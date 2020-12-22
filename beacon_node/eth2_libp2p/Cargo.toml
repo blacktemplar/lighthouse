@@ -24,7 +24,7 @@ fnv = "1.0.7"
 lazy_static = "1.4.0"
 lighthouse_metrics = { path = "../../common/lighthouse_metrics" }
 smallvec = "1.4.2"
-tokio-io-timeout = "0.5.0" 
+tokio-io-timeout = "0.5.0"
 lru = "0.6.0"
 parking_lot = "0.11.0"
 sha2 = "0.9.1"
@@ -42,7 +42,7 @@ regex = "1.3.9"
 [dependencies.libp2p]
 #version = "0.23.0"
 git = "https://github.com/sigp/rust-libp2p"
-rev = "97000533e4710183124abde017c6c3d68287c1ae"
+rev = "5ae23ac540cab55ced69509f53210a2fb30c53ec"
 default-features = false
 features = ["websocket", "identify", "mplex", "yamux", "noise", "gossipsub", "dns", "tcp-tokio"]
 

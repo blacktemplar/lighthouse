@@ -67,6 +67,11 @@ lazy_static! {
             "Gossipsub messages that we did not accept, per client",
             &["client", "validation_result"]
         );
+    pub static ref GOSSIP_MESSAGES_PER_TOPIC: Result<IntCounterVec> = try_create_int_counter_vec(
+        "gossipsub_messages_per_topic",
+        "Gossipsub messages per topic",
+        &["topic"]
+    );
 }
 
 pub fn scrape_discovery_metrics() {

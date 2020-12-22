@@ -10,7 +10,9 @@ use eth2_libp2p::{
     rpc::{GoodbyeReason, RPCResponseErrorCode, RequestId},
     Libp2pEvent, PeerAction, PeerRequestId, PubsubMessage, ReportSource, Request, Response,
 };
-use eth2_libp2p::{types::GossipKind, BehaviourEvent, MessageId, NetworkGlobals, PeerId};
+use eth2_libp2p::{
+    types::GossipKind, BehaviourEvent, MessageId, NetworkGlobals, PeerId, SemanticMessageId,
+};
 use eth2_libp2p::{MessageAcceptance, Service as LibP2PService};
 use futures::prelude::*;
 use slog::{debug, error, info, o, trace, warn};
@@ -66,6 +68,8 @@ pub enum NetworkMessage<T: EthSpec> {
         message_id: MessageId,
         /// The result of the validation
         validation_result: MessageAcceptance,
+        /// Semantic gossipsub id
+        semantic_id: Option<SemanticMessageId>,
     },
     /// Called if a known external TCP socket address has been updated.
     UPnPMappingEstablished {
@@ -357,6 +361,7 @@ fn spawn_service<T: BeaconChainTypes>(
                             propagation_source,
                             message_id,
                             validation_result,
+                            semantic_id
                         } => {
                                 trace!(service.log, "Propagating gossipsub message";
                                     "propagation_peer" => ?propagation_source,
@@ -367,7 +372,8 @@ fn spawn_service<T: BeaconChainTypes>(
                                     .libp2p
                                     .swarm
                                     .report_message_validation_result(
-                                        &propagation_source, message_id, validation_result
+                                        &propagation_source, message_id, validation_result,
+                                        semantic_id
                                     );
                         }
                         NetworkMessage::Publish { messages } => {

@@ -259,6 +259,7 @@ impl From<BeaconChainError> for Error {
 pub struct VerifiedAggregatedAttestation<T: BeaconChainTypes> {
     signed_aggregate: SignedAggregateAndProof<T::EthSpec>,
     indexed_attestation: IndexedAttestation<T::EthSpec>,
+    attestation_root: Hash256, //caching the root for later use
 }
 
 /// Wraps an `Attestation` that has been verified for propagation on the gossip network.
@@ -559,6 +560,7 @@ impl<T: BeaconChainTypes> VerifiedAggregatedAttestation<T> {
         Ok(VerifiedAggregatedAttestation {
             signed_aggregate,
             indexed_attestation,
+            attestation_root,
         })
     }
 
@@ -575,6 +577,10 @@ impl<T: BeaconChainTypes> VerifiedAggregatedAttestation<T> {
     /// Returns the underlying `signed_aggregate`.
     pub fn aggregate(&self) -> &SignedAggregateAndProof<T::EthSpec> {
         &self.signed_aggregate
+    }
+
+    pub fn attestation_root(&self) -> &Hash256 {
+        &self.attestation_root
     }
 }
 

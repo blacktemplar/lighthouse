@@ -9,8 +9,8 @@ use crate::types::{
     subnet_id_from_topic_hash, GossipEncoding, GossipKind, GossipTopic, SnappyTransform,
     SubnetDiscovery,
 };
-use crate::Eth2Enr;
 use crate::{error, metrics, Enr, NetworkConfig, NetworkGlobals, PubsubMessage, TopicHash};
+use crate::{Eth2Enr, SemanticMessageId};
 use futures::prelude::*;
 use handler::{BehaviourHandler, BehaviourHandlerIn, DelegateIn, DelegateOut};
 use libp2p::{
@@ -426,6 +426,7 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
         propagation_source: &PeerId,
         message_id: MessageId,
         validation_result: MessageAcceptance,
+        semantic_id: Option<SemanticMessageId>,
     ) {
         if let Some(result) = match validation_result {
             MessageAcceptance::Accept => None,
@@ -446,11 +447,15 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
             }
         }
 
-        if let Err(e) = self.gossipsub.report_message_validation_result(
-            &message_id,
-            propagation_source,
-            validation_result,
-        ) {
+        if let Err(e) = self
+            .gossipsub
+            .report_message_validation_result_with_semantic_id(
+                &message_id,
+                propagation_source,
+                validation_result,
+                semantic_id,
+            )
+        {
             warn!(self.log, "Failed to report message validation"; "message_id" => %message_id, "peer_id" => %propagation_source, "error" => ?e);
         }
     }
@@ -636,6 +641,11 @@ impl<TSpec: EthSpec> Behaviour<TSpec> {
                 message_id: id,
                 message: gs_msg,
             } => {
+                metrics::inc_counter_vec(
+                    &metrics::GOSSIP_MESSAGES_PER_TOPIC,
+                    &[gs_msg.topic.as_str()],
+                );
+
                 // Note: We are keeping track here of the peer that sent us the message, not the
                 // peer that originally published the message.
                 match PubsubMessage::decode(&gs_msg.topic, &gs_msg.data) {
